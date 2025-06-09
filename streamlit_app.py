@@ -1,20 +1,12 @@
-
-### Estrutura inicial do robô de swing trade para a B3 usando Python + Streamlit + yfinance (modo simulado)
-
-# Requisitos:
-# pip install streamlit yfinance ta pandas matplotlib
-
-# Arquivo: streamlit_app.py
 import streamlit as st
 import yfinance as yf
 import pandas as pd
 import ta
-import datetime
 
 st.set_page_config(page_title="Robô de Swing Trade - B3", layout="wide")
 st.title("📊 Robô de Swing Trade - Ações BR (Simulado)")
 
-# Sidebar
+# Sidebar - Parâmetros da estratégia
 st.sidebar.header("Parâmetros da Estratégia")
 ticker = st.sidebar.text_input("Ticker (ex: PETR4.SA)", value="PETR4.SA")
 periodo = st.sidebar.selectbox("Período", ["3mo", "6mo", "1y"], index=0)
@@ -33,9 +25,21 @@ if df.empty:
     st.error("Erro ao buscar os dados. Verifique o ticker e tente novamente.")
     st.stop()
 
-# Cálculo de indicadores
-df['RSI'] = ta.momentum.RSIIndicator(df['Close'], window=rsi_window).rsi()
-df['MME'] = df['Close'].ewm(span=mme_period).mean()
+# --- TRATAMENTO PARA EVITAR ERRO NO RSI ---
+
+# Preencher possíveis valores NaN na coluna Close
+df['Close'] = df['Close'].fillna(method='ffill').fillna(method='bfill')
+
+# Garantir que 'Close' é uma Series 1D para o RSI
+close_prices = df['Close'].squeeze()
+
+# Calcular RSI e MME
+df['RSI'] = ta.momentum.RSIIndicator(close_prices, window=rsi_window).rsi()
+df['MME'] = close_prices.ewm(span=mme_period).mean()
+
+# Exibir informações para debug (remova se quiser)
+st.write("Dados de fechamento:", df['Close'].head())
+st.write("Valores nulos em Close:", df['Close'].isnull().sum())
 
 # Sinal atual
 ultima_linha = df.iloc[-1]
