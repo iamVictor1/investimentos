@@ -53,9 +53,26 @@ if rsi_val < 30 and close_val > mme_val:
     sinal = "📈 COMPRA"
 elif rsi_val > 70 or close_val < mme_val:
     sinal = "🔻 VENDA"
-
+    
 # Gráfico
 st.subheader(f"Gráfico de Preço - {ticker}")
+
+# Preencher valores NaN nas colunas essenciais
+df['Close'] = df['Close'].fillna(method='ffill').fillna(method='bfill')
+df['MME'] = df['Close'].ewm(span=mme_period).mean()
+df['MME'] = df['MME'].fillna(method='ffill').fillna(method='bfill')
+
+# Conferir as colunas antes de plotar
+st.write("Colunas disponíveis no DataFrame:", df.columns)
+
+# Garantir que não há NaN nas colunas usadas no gráfico
+df_plot = df[['Close', 'MME']].dropna()
+
+try:
+    st.line_chart(df_plot)
+except KeyError as e:
+    st.error(f"Erro: coluna não encontrada - {e}")
+    st.write("Colunas atuais:", df.columns)
 st.line_chart(df[['Close', 'MME']])
 
 # Exibição do RSI
