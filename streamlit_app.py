@@ -25,8 +25,6 @@ if df.empty:
     st.error("Erro ao buscar os dados. Verifique o ticker e tente novamente.")
     st.stop()
 
-# --- TRATAMENTO PARA EVITAR ERRO NO RSI ---
-
 # Preencher possíveis valores NaN na coluna Close
 df['Close'] = df['Close'].fillna(method='ffill').fillna(method='bfill')
 
@@ -37,16 +35,23 @@ close_prices = df['Close'].squeeze()
 df['RSI'] = ta.momentum.RSIIndicator(close_prices, window=rsi_window).rsi()
 df['MME'] = close_prices.ewm(span=mme_period).mean()
 
-# Exibir informações para debug (remova se quiser)
-st.write("Dados de fechamento:", df['Close'].head())
-st.write("Valores nulos em Close:", df['Close'].isnull().sum())
+# Função para extrair valor escalar com segurança
+def get_scalar(val):
+    try:
+        return val.item()
+    except:
+        return val
 
-# Sinal atual
+# Sinal atual corrigido para evitar erro
 ultima_linha = df.iloc[-1]
+rsi_val = get_scalar(ultima_linha['RSI'])
+close_val = get_scalar(ultima_linha['Close'])
+mme_val = get_scalar(ultima_linha['MME'])
+
 sinal = "AGUARDAR"
-if ultima_linha['RSI'] < 30 and ultima_linha['Close'] > ultima_linha['MME']:
+if rsi_val < 30 and close_val > mme_val:
     sinal = "📈 COMPRA"
-elif ultima_linha['RSI'] > 70 or ultima_linha['Close'] < ultima_linha['MME']:
+elif rsi_val > 70 or close_val < mme_val:
     sinal = "🔻 VENDA"
 
 # Gráfico
